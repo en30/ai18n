@@ -1,0 +1,12 @@
+<% content_for :title, "投稿を編集" %>
+
+<h1>投稿を編集</h1>
+
+<%= render "form", post: @post %>
+
+<br>
+
+<div>
+  <%= link_to "見る", @post %> |
+  <%= link_to "一覧に戻る", posts_path %>
+</div>

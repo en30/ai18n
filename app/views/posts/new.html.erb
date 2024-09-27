@@ -1,0 +1,11 @@
+<% content_for :title, "新規作成" %>
+
+<h1>新規作成</h1>
+
+<%= render "form", post: @post %>
+
+<br>
+
+<div>
+  <%= link_to "一覧に戻る", posts_path %>
+</div>

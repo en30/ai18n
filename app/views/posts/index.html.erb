@@ -1,0 +1,16 @@
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "投稿一覧" %>
+
+<h1>投稿一覧</h1>
+
+<div id="posts">
+  <% @posts.each do |post| %>
+    <%= render post %>
+    <p>
+      <%= link_to "投稿を見る", post %>
+    </p>
+  <% end %>
+</div>
+
+<%= link_to "投稿する", new_post_path %>
