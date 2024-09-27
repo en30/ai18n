@@ -1,0 +1,48 @@
+#!/bin/bash
+
+file="$2"
+i18n_file="tmp/i18n/${file//\//_}.json"
+
+_diff() {
+  git diff "$file" <(cat "$i18n_file" | jq --raw-output '.content')
+}
+
+_apply() {
+  cat "$i18n_file" | jq --raw-output '.content' > "$file"
+  cat "$i18n_file" | jq '.ja | to_entries | map(.value as $v | .key | split(".") | reverse | reduce .[] as $item ($v; {($item): .})) | reduce .[] as $item ({}; . * $item) | {ja: .}' | i18n-tasks data-merge
+  i18n-tasks normalize
+}
+
+case "$1" in
+  suggest)
+    bin/i18n-suggest "$file"
+    ;;
+  diff)
+    _diff
+    ;;
+  apply)
+    _apply
+    ;;
+  open)
+    $EDITOR "$i18n_file"
+    ;;
+  rewrite)
+    bin/i18n-suggest "$file"
+    apply
+    ;;
+  rm)
+    rm "$i18n_file"
+    ;;
+  translate)
+    bin/i18n-translate "$2"
+    ;;
+  translate-missing)
+    i18n-tasks missing -f yaml "$2" | sed -E "s/^$2:/ja:/" | bin/i18n-translate "$2" | i18n-tasks data-merge
+    ;;
+  *)
+    echo "Usage:"
+    echo "- $0 {suggest|apply|open|rewrite|diff|rm} <file>"
+    echo "- $0 {translate|translate-missing} <locale>"
+    exit 1
+    ;;
+esac

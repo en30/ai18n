@@ -1,0 +1,165 @@
+#!/usr/bin/env node
+
+const fs = require("node:fs");
+const https = require("node:https");
+
+const system = `You are an expert Rails developer and internationalization specialist. Your task is to refactor Rails view files to support multiple languages using the I18n API, with a focus on Japanese translations. You have deep knowledge of Ruby on Rails, ERB templates, and the I18n gem.
+
+Your capabilities include:
+1. Identifying Japanese text in Rails files
+2. Refactoring code to use I18n \`t\` helper methods
+3. Creating JSON structures with proper formatting and escaping
+4. Organizing translations into appropriate key-value pairs
+
+You will receive input containing Rails view file content. Your goal is to process this input and produce a JSON output that includes:
+1. The name of the processed file
+2. A refactored file content
+3. A Japanese translations object with appropriate key-value pairs
+
+You must follow the exact format and structure specified in the task description, paying close attention to detail and ensuring all requirements are met.
+`;
+
+const filePath = process.argv[2];
+
+fs.mkdirSync("tmp/i18n", { recursive: true });
+const outputFilePath = `tmp/i18n/${filePath.replace(/\//g, "_")}.json`;
+
+if (fs.existsSync(outputFilePath)) {
+  console.log(
+    `Output file ${outputFilePath} already exists. Skipping processing.`
+  );
+  process.exit(0);
+}
+
+const fileContent = fs.readFileSync(filePath, "utf8");
+const prompt = `You are tasked with enabling multi-language support in a Rails project by refactoring files to use the I18n API. Your goal is to generate a JSON object that includes a patch for the changes and the corresponding Japanese translations.
+
+Follow these steps to complete the task:
+1. Identify Japanese text in the file content.
+2. For each identified Japanese text, replace it with an appropriate \`t\` call. Choose a descriptive key name for each translation. For view and controller files the format should be \`t('.[key_name]', variable: value)\` for local translations within the file.
+3. Generate a refactored file content. This will be stored in the "content" field of the output JSON. Ensure that the output file is properly formatted and escaped.
+4. Create a \`ja\` translations object that includes key-value pairs for each replaced Japanese text. The keys should match those used in the \`t\` calls, and the values should be the original Japanese text.
+5. Construct the output JSON object with the following structure:
+  - "file": The name of the processed file (extracted from the first line of the input)
+  - "content": The refactored file content
+  - "ja": The Japanese translations object
+6. Ensure that the output JSON is properly formatted and escaped.
+
+Here's examples of input and what the output should look like:
+
+<example>
+<input>
+\`\`\`app/views/users/show.html.erb
+<h1><%= @user.name %>さんのプロフィール</h1>
+
+<p><strong>メールアドレス:</strong> <%= @user.email %></p>
+
+<% if @user.bio.present? %>
+  <p><strong>自己紹介:</strong> <%= @user.bio %></p>
+<% else %>
+  <p>自己紹介はまだ登録されていません。</p>
+<% end %>
+
+<p><strong>登録日:</strong> <%= @user.created_at.strftime("%Y年%m月%d日") %></p>
+
+<h2>投稿一覧</h2>
+<% if @user.posts.any? %>
+  <ul>
+    <% @user.posts.each do |post| %>
+      <li>
+        <h3><%= link_to post.title, post_path(post) %></h3>
+        <p><%= truncate(post.content, length: 100) %></p>
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p>まだ投稿がありません。</p>
+<% end %>
+
+<%= link_to '編集', edit_user_path(@user), class: 'btn btn-primary' %>
+<%= link_to '戻る', users_path, class: 'btn btn-secondary' %>
+\`\`\`
+</input>
+
+<output>
+{
+  "file": "app/views/users/show.html.erb",
+  "content": "<h1><%= t('.profile_title', name: @user.name) %></h1>\\n\\n<p><strong><%= t('.email') %>:</strong> <%= @user.email %></p>\\n\\n<% if @user.bio.present? %>\\n  <p><strong><%= t('.bio') %>:</strong> <%= @user.bio %></p>\\n<% else %>\\n  <p><%= t('.no_bio') %></p>\\n<% end %>\\n\\n<p><strong><%= t('.registration_date') %>:</strong> <%= l(@user.created_at, format: :long) %></p>\\n\\n<h2><%= t('.posts_list') %></h2>\\n<% if @user.posts.any? %>\\n  <ul>\\n    <% @user.posts.each do |post| %>\\n      <li>\\n        <h3><%= link_to post.title, post_path(post) %></h3>\\n        <p><%= truncate(post.content, length: 100) %></p>\\n      </li>\\n    <% end %>\\n  </ul>\\n<% else %>\\n  <p><%= t('.no_posts') %></p>\\n<% end %>\\n\\n<%= link_to t('common.edit'), edit_user_path(@user), class: 'btn btn-primary' %>\\n<%= link_to t('common.back'), users_path, class: 'btn btn-secondary' %>\\n",
+  "ja": {
+    "users.show.profile_title": "%{name}さんのプロフィール",
+    "users.show.email": "メールアドレス",
+    "users.show.bio": "自己紹介",
+    "users.show.no_bio": "自己紹介はまだ登録されていません。",
+    "users.show.registration_date": "登録日",
+    "users.show.posts_list": "投稿一覧",
+    "users.show.no_posts": "まだ投稿がありません。",
+    "common.edit": "編集",
+    "common.back": "戻る"
+  }
+}
+</output>
+</example>
+
+Make sure to follow this exact format and structure in your output.
+
+Here is the input to be processed:
+<input>
+\`\`\`${filePath}
+${fileContent}
+\`\`\`
+</input>
+`;
+
+const data = JSON.stringify({
+  model: "claude-3-5-sonnet-20240620",
+  max_tokens: 8192,
+  system,
+  messages: [
+    {
+      role: "user",
+      content: prompt,
+    },
+    {
+      role: "assistant",
+      content: "{",
+    },
+  ],
+});
+
+const options = {
+  hostname: "api.anthropic.com",
+  path: "/v1/messages",
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-API-Key": process.env.ANTHROPIC_API_KEY,
+    "anthropic-version": "2023-06-01",
+    "Content-Length": Buffer.byteLength(data),
+  },
+};
+
+const req = https.request(options, (resp) => {
+  let responseData = "";
+
+  resp.on("data", (chunk) => {
+    responseData += chunk;
+  });
+
+  resp.on("end", () => {
+    const res = JSON.parse(responseData);
+    if (resp.statusCode === 200) {
+      fs.writeFileSync(outputFilePath, "{" + res.content[0].text);
+      console.log(`Output written to ${outputFilePath}`);
+    } else {
+      console.log(res);
+      process.exit(1);
+    }
+  });
+});
+
+req.on("error", (error) => {
+  console.error("Error:", error);
+});
+
+req.write(data);
+req.end();

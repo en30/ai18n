@@ -1,0 +1,120 @@
+#!/usr/bin/env node
+
+const fs = require("node:fs/promises");
+const https = require("node:https");
+
+const system = `You are an AI language model specialized in translating YAML files for Rails applications, with a focus on user interface (UI) components. Your primary function is to accurately translate content while preserving the exact structure and functionality of the YAML file, ensuring a good user experience (UX) in the target language. You have expertise in multiple languages, understand the nuances of Rails internationalization (i18n) files, and are skilled in UI/UX best practices.
+General guidelines:
+
+1. Maintain the exact structure of YAML files, including indentation and key names.
+2. Preserve placeholders (e.g., %{name}, %{count}) and HTML tags in translations.
+3. Handle comments by translating the text but keeping the # symbol.
+4. For date and time formats, maintain format specifiers (e.g., %Y, %m, %d) while translating surrounding text.
+5. Use commonly accepted translations for technical terms or Rails-specific vocabulary, or leave them untranslated if that's the convention.
+6. Ensure translations fit the context provided by the keys and maintain a consistent tone.
+7. If unsure about a translation, provide the most appropriate one based on context and add a comment (prefixed with #) explaining your decision.
+8. Add double quotes around translated values if they contain special characters, colons, or start with characters that could be misinterpreted as YAML syntax.
+9. Translate with UI/UX in mind, considering factors like text length, clarity, and cultural appropriateness for the target language.
+
+Your output should always be the entire translated YAML content, preserving all original formatting and structure, without any additional text or explanations.
+`;
+
+const request = (messages) =>
+  new Promise((resolve, reject) => {
+    const data = JSON.stringify({
+      model: "claude-3-5-sonnet-20240620",
+      max_tokens: 8192,
+      system,
+      messages,
+    });
+
+    const options = {
+      hostname: "api.anthropic.com",
+      path: "/v1/messages",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Length": Buffer.byteLength(data),
+        "anthropic-beta": "prompt-caching-2024-07-31",
+      },
+    };
+
+    const req = https.request(options, (resp) => {
+      let responseData = "";
+
+      resp.on("data", (chunk) => {
+        responseData += chunk;
+      });
+
+      resp.on("end", () => {
+        const res = JSON.parse(responseData);
+        if (resp.statusCode === 200) {
+          resolve(res);
+        } else {
+          reject(res);
+        }
+      });
+    });
+
+    req.on("error", reject);
+    req.write(data);
+    req.end();
+  });
+
+const prompt = (ja, target) => {
+  return `Translate the following Rails \`config/locales/ja.yml\` file from Japanese to ${target}, keeping in mind that these translations are for UI components. Focus on providing translations that ensure a good user experience (UX) in ${target}. Here's the content of the YAML file:
+<yaml_content lang="ja">
+${ja}
+</yaml_content>
+Translate only the values (text after the colon) from Japanese to ${target}. Do not translate or modify the keys. Add double quotes around translated values if necessary (e.g., if they contain special characters, colons, or start with characters that could be misinterpreted as YAML syntax). The goal is to provide an accurate ${target} translation that maintains YAML structure and functions correctly in a Rails application while ensuring a positive user experience.
+`;
+};
+
+(async () => {
+  const target = process.argv[2];
+
+  let ja;
+  if (process.stdin.isTTY) {
+    ja = await fs.readFile("config/locales/ja.yml", "utf8");
+  } else {
+    const chunks = [];
+    for await (const chunk of process.stdin) {
+      chunks.push(chunk);
+    }
+    ja = Buffer.concat(chunks).toString("utf8");
+  }
+
+  try {
+    let result = `---\n${target}:`;
+
+    for (let i = 0; i < 10; i++) {
+      const resp = await request([
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: prompt(ja, target),
+              cache_control: { type: "ephemeral" },
+            },
+          ],
+        },
+        {
+          role: "assistant",
+          content: result,
+        },
+      ]);
+      result += resp.content[0].text;
+
+      if (resp.stop_reason !== "max_tokens") break;
+      result = result.trimEnd();
+    }
+
+    console.log(result);
+  } catch (error) {
+    console.error(error);
+    process.exit(1);
+  }
+})();
