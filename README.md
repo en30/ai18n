@@ -35,7 +35,7 @@ $ bundle add i18n-tasks -g development
 
 ```sh
 for file in i18n i18n-suggest i18n-translate; do
-  curl -L -o "bin/${file}" "https://raw.githubusercontent.com/en30/ai18n/refs/heads/master/bin/${file}"
+  curl -L -o "bin/${file}" "https://raw.githubusercontent.com/en30/ai18n/refs/heads/main/bin/${file}"
   chmod +x "bin/${file}"
 done
 ```
