@@ -4,6 +4,12 @@ An AI-powered i18n command and its Demo Rails application.
 
 ## Usage
 
+`ANTHROPIC_API_KEY` is required to use the AI.
+
+```sh
+ export ANTHROPIC_API_KEY="YOUR_API_KEY"
+```
+
 ### Code Conversion
 
 1. Pass the file you want to convert with `bin/i18n suggest $file` to output a JSON file for code conversion
