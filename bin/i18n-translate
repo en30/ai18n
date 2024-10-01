@@ -63,27 +63,27 @@ const request = (messages) =>
     req.end();
   });
 
-const prompt = (ja, target) => {
-  return `Translate the following Rails \`config/locales/ja.yml\` file from Japanese to ${target}, keeping in mind that these translations are for UI components. Focus on providing translations that ensure a good user experience (UX) in ${target}. Here's the content of the YAML file:
-<yaml_content lang="ja">
-${ja}
+const prompt = (en, target) => {
+  return `Translate the following Rails \`config/locales/en.yml\` file from English to ${target}, keeping in mind that these translations are for UI components. Focus on providing translations that ensure a good user experience (UX) in ${target}. Here's the content of the YAML file:
+<yaml_content lang="en">
+${en}
 </yaml_content>
-Translate only the values (text after the colon) from Japanese to ${target}. Do not translate or modify the keys. Add double quotes around translated values if necessary (e.g., if they contain special characters, colons, or start with characters that could be misinterpreted as YAML syntax). The goal is to provide an accurate ${target} translation that maintains YAML structure and functions correctly in a Rails application while ensuring a positive user experience.
+Translate only the values (text after the colon) from English to ${target}. Do not translate or modify the keys. Add double quotes around translated values if necessary (e.g., if they contain special characters, colons, or start with characters that could be misinterpreted as YAML syntax). The goal is to provide an accurate ${target} translation that maintains YAML structure and functions correctly in a Rails application while ensuring a positive user experience.
 `;
 };
 
 (async () => {
   const target = process.argv[2];
 
-  let ja;
+  let en;
   if (process.stdin.isTTY) {
-    ja = await fs.readFile("config/locales/ja.yml", "utf8");
+    en = await fs.readFile("config/locales/en.yml", "utf8");
   } else {
     const chunks = [];
     for await (const chunk of process.stdin) {
       chunks.push(chunk);
     }
-    ja = Buffer.concat(chunks).toString("utf8");
+    en = Buffer.concat(chunks).toString("utf8");
   }
 
   try {
@@ -96,7 +96,7 @@ Translate only the values (text after the colon) from Japanese to ${target}. Do 
           content: [
             {
               type: "text",
-              text: prompt(ja, target),
+              text: prompt(en, target),
               cache_control: { type: "ephemeral" },
             },
           ],

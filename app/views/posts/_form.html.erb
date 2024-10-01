@@ -1,7 +1,7 @@
 <%= form_with(model: post) do |form| %>
   <% if post.errors.any? %>
     <div style="color: red">
-      <h2>入力内容をご確認ください。</h2>
+      <h2><%= pluralize(post.errors.count, "error") %> prohibited this post from being saved:</h2>
 
       <ul>
         <% post.errors.each do |error| %>
@@ -12,16 +12,16 @@
   <% end %>
 
   <div>
-    <%= form.label :title, "タイトル", style: "display: block" %>
+    <%= form.label :title, style: "display: block" %>
     <%= form.text_field :title %>
   </div>
 
   <div>
-    <%= form.label :content, "本文", style: "display: block" %>
+    <%= form.label :content, style: "display: block" %>
     <%= form.text_area :content %>
   </div>
 
   <div>
-    <%= form.submit "保存" %>
+    <%= form.submit %>
   </div>
 <% end %>

@@ -9,7 +9,7 @@ _diff() {
 
 _apply() {
   cat "$i18n_file" | jq --raw-output '.content' > "$file"
-  cat "$i18n_file" | jq '.ja | to_entries | map(.value as $v | .key | split(".") | reverse | reduce .[] as $item ($v; {($item): .})) | reduce .[] as $item ({}; . * $item) | {ja: .}' | i18n-tasks data-merge
+  cat "$i18n_file" | jq '.en | to_entries | map(.value as $v | .key | split(".") | reverse | reduce .[] as $item ($v; {($item): .})) | reduce .[] as $item ({}; . * $item) | {en: .}' | i18n-tasks data-merge
   i18n-tasks normalize
 }
 
@@ -37,7 +37,7 @@ case "$1" in
     bin/i18n-translate "$2"
     ;;
   translate-missing)
-    i18n-tasks missing -f yaml "$2" | sed -E "s/^$2:/ja:/" | bin/i18n-translate "$2" | i18n-tasks data-merge
+    i18n-tasks missing -f yaml "$2" | sed -E "s/^$2:/en:/" | bin/i18n-translate "$2" | i18n-tasks data-merge
     ;;
   *)
     echo "Usage:"
